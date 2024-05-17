@@ -9,8 +9,9 @@ static class Program
     static void Main()
     {
         Stopwatch sw = Stopwatch.StartNew();
-        var folder = System.IO.Directory.CreateDirectory("output");
-        foreach (var file in folder.GetFiles()) file.Delete();
+
+        const string outputDirectoryName = "output";
+        PrepareOutputDirectory(outputDirectoryName);
 
         Random random = new();
         XDocument xdoc = XDocument.Load("samples.xml");
@@ -56,9 +57,9 @@ static class Program
                     if (success)
                     {
                         Console.WriteLine("DONE");
-                        model.Save($"output/{name} {seed}.png");
+                        model.Save($"{outputDirectoryName}/{name} {seed}.png");
                         if (model is SimpleTiledModel stmodel && xelem.Get("textOutput", false))
-                            System.IO.File.WriteAllText($"output/{name} {seed}.txt", stmodel.TextOutput());
+                            System.IO.File.WriteAllText($"{outputDirectoryName}/{name} {seed}.txt", stmodel.TextOutput());
                         break;
                     }
                     else Console.WriteLine("CONTRADICTION");
@@ -67,5 +68,11 @@ static class Program
         }
 
         Console.WriteLine($"time = {sw.ElapsedMilliseconds}");
+    }
+
+    private static void PrepareOutputDirectory(string directoryName)
+    {
+        var directory = System.IO.Directory.CreateDirectory(directoryName);
+        foreach (var file in directory.GetFiles()) file.Delete();
     }
 }
