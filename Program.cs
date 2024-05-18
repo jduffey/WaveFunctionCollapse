@@ -56,11 +56,11 @@ static class Program
                 model = new SimpleTiledModel(name, subset, width, height, periodic, blackBackground, heuristic);
             }
 
-            var maxScreenshots = xelem.Get("screenshots", 2);
+            var maxScreenshots = randomValueOverride.HasValue ? 1 : xelem.Get("screenshots", 2);
             for (int i = 0; i < maxScreenshots; i++)
             {
                 Console.WriteLine($" - Screenshot {i + 1}/{maxScreenshots}");
-                var maxAttempts = 10;
+                var maxAttempts = randomValueOverride.HasValue ? 1 : 10;
                 for (int k = 0; k < maxAttempts; k++)
                 {
                     Console.Write($"  - Attempt {k + 1}/{maxAttempts} --> ");
