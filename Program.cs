@@ -6,14 +6,23 @@ using System.Diagnostics;
 
 static class Program
 {
-    static void Main()
+    static void Main(string[] args)
     {
         Stopwatch sw = Stopwatch.StartNew();
 
         const string outputDirectoryName = "output";
         PrepareOutputDirectory(outputDirectoryName);
 
-        Random random = new();
+        Random random = new Random();
+        string randomValueOverrideFlag = "--randomValueOverride";
+        int randomValueOverrideIndex = Array.IndexOf(args, randomValueOverrideFlag);
+
+        int? randomValueOverride = null;
+        if (randomValueOverrideIndex >= 0 && randomValueOverrideIndex + 1 < args.Length && int.TryParse(args[randomValueOverrideIndex + 1], out int flagValue))
+        {
+            randomValueOverride = flagValue;
+        }
+
         XDocument xdoc = XDocument.Load("samples.xml");
 
         foreach (XElement xelem in xdoc.Root.Elements("overlapping", "simpletiled"))
@@ -52,7 +61,7 @@ static class Program
                 for (int k = 0; k < 10; k++)
                 {
                     Console.Write("> ");
-                    int seed = random.Next();
+                    int seed = randomValueOverride ?? random.Next();
                     bool success = model.Run(seed, xelem.Get("limit", -1));
                     if (success)
                     {
