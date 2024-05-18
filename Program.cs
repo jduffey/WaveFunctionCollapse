@@ -17,18 +17,9 @@ static class Program
         const string outputDirectoryName = "output";
         PrepareOutputDirectory(outputDirectoryName);
 
-        Random random = new Random();
-        string randomValueOverrideFlag = "--randomValueOverride";
-        int randomValueOverrideIndex = Array.IndexOf(args, randomValueOverrideFlag);
-
-        int? randomValueOverride = null;
-        if (randomValueOverrideIndex >= 0 && randomValueOverrideIndex + 1 < args.Length && int.TryParse(args[randomValueOverrideIndex + 1], out int flagValue))
-        {
-            randomValueOverride = flagValue;
-        }
-
         XDocument xdoc = XDocument.Load("samples.xml");
-
+        var randomValueOverride = GetFlagValue(args, "--randomValueOverride");
+        Random random = new Random();
         foreach (XElement xelem in xdoc.Root.Elements("overlapping", "simpletiled"))
         {
             Model model;
@@ -41,7 +32,12 @@ static class Program
             int height = xelem.Get("height", size);
             bool periodic = xelem.Get("periodic", false);
             string heuristicString = xelem.Get<string>("heuristic");
-            var heuristic = heuristicString == "Scanline" ? Model.Heuristic.Scanline : (heuristicString == "MRV" ? Model.Heuristic.MRV : Model.Heuristic.Entropy);
+            var heuristic = heuristicString switch
+            {
+                "Scanline" => Model.Heuristic.Scanline,
+                "MRV" => Model.Heuristic.MRV,
+                _ => Model.Heuristic.Entropy
+            };
 
             if (isOverlapping)
             {
@@ -72,23 +68,41 @@ static class Program
                         Console.WriteLine("DONE");
                         model.Save($"{outputDirectoryName}/{name} {seed}.png");
                         if (model is SimpleTiledModel stmodel && xelem.Get("textOutput", false))
-                            System.IO.File.WriteAllText($"{outputDirectoryName}/{name} {seed}.txt", stmodel.TextOutput());
+                        {
+                            File.WriteAllText($"{outputDirectoryName}/{name} {seed}.txt", stmodel.TextOutput());
+                        }
                         break;
                     }
-                    else Console.WriteLine("CONTRADICTION");
+
+                    Console.WriteLine("CONTRADICTION");
                 }
             }
         }
 
-        Console.WriteLine($"time = {sw.ElapsedMilliseconds} for generating output");
+        var elapsedMilliseconds = sw.ElapsedMilliseconds;
+        Console.WriteLine($"time = {elapsedMilliseconds} for generating output");
 
         if (randomValueOverride is not null)
         {
-            CalculateAndSaveHashes(outputDirectoryName, randomValueOverride.Value);
+            CalculateAndSaveHashes(outputDirectoryName, randomValueOverride.Value, elapsedMilliseconds);
         }
     }
 
-    static void CalculateAndSaveHashes(string directoryPath, int randomValueOverride)
+    private static int? GetFlagValue(string[] args, string flagName)
+    {
+        int flagNameIndex = Array.IndexOf(args, flagName);
+
+        if (flagNameIndex >= 0 &&
+            flagNameIndex + 1 < args.Length &&
+            int.TryParse(args[flagNameIndex + 1], out int flagValue))
+        {
+            return flagValue;
+        }
+
+        return null;
+    }
+
+    static void CalculateAndSaveHashes(string directoryPath, int randomValueOverride, long elapsedMilliseconds)
     {
         if (!Directory.Exists(directoryPath))
         {
@@ -112,6 +126,7 @@ static class Program
         string outputFileName = $"{timestamp}_{randomValueOverride}.txt";
 
         sb.AppendLine();
+        sb.AppendLine($"Elapsed Milliseconds: {elapsedMilliseconds}");
         sb.AppendLine($"Runtime Version: {Environment.Version}");
         sb.AppendLine($"Operating System: {Environment.OSVersion}");
         sb.AppendLine($"Processor Count: {Environment.ProcessorCount}");
@@ -122,17 +137,15 @@ static class Program
 
     static string ComputeSha256Hash(string filePath)
     {
-        using (SHA256 sha256 = SHA256.Create())
-        using (FileStream fs = File.OpenRead(filePath))
-        {
-            byte[] hashBytes = sha256.ComputeHash(fs);
-            return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
-        }
+        using SHA256 sha256 = SHA256.Create();
+        using FileStream fs = File.OpenRead(filePath);
+        byte[] hashBytes = sha256.ComputeHash(fs);
+        return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
     }
 
     private static void PrepareOutputDirectory(string directoryName)
     {
-        var directory = System.IO.Directory.CreateDirectory(directoryName);
+        var directory = Directory.CreateDirectory(directoryName);
         foreach (var file in directory.GetFiles()) file.Delete();
     }
 }
