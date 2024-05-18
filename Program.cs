@@ -10,7 +10,7 @@ using System.Text;
 
 static class Program
 {
-    static void Main(string[] args)
+    private static void Main(string[] args)
     {
         Stopwatch sw = Stopwatch.StartNew();
 
@@ -80,7 +80,7 @@ static class Program
         }
 
         var elapsedMilliseconds = sw.ElapsedMilliseconds;
-        Console.WriteLine($"time = {elapsedMilliseconds} for generating output");
+        Console.WriteLine($"time = {elapsedMilliseconds} ms for generating output");
 
         if (randomValueOverride is not null)
         {
@@ -102,7 +102,7 @@ static class Program
         return null;
     }
 
-    static void CalculateAndSaveHashes(string directoryPath, int randomValueOverride, long elapsedMilliseconds)
+    private static void CalculateAndSaveHashes(string directoryPath, int randomValueOverride, long elapsedMilliseconds)
     {
         if (!Directory.Exists(directoryPath))
         {
@@ -135,7 +135,7 @@ static class Program
         File.WriteAllText(outputFileName, sb.ToString());
     }
 
-    static string ComputeSha256Hash(string filePath)
+    private static string ComputeSha256Hash(string filePath)
     {
         using SHA256 sha256 = SHA256.Create();
         using FileStream fs = File.OpenRead(filePath);
