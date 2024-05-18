@@ -2,7 +2,9 @@
 
 using System;
 
-abstract class Model
+namespace WaveFunctionCollapse;
+
+internal abstract class Model(int width, int height, int N, bool periodic, Model.Heuristic heuristic)
 {
     protected bool[][] wave;
 
@@ -13,8 +15,8 @@ abstract class Model
     (int, int)[] stack;
     int stacksize, observedSoFar;
 
-    protected int MX, MY, T, N;
-    protected bool periodic, ground;
+    protected int MX = width, MY = height, T, N = N;
+    protected bool periodic = periodic, ground;
 
     protected double[] weights;
     double[] weightLogWeights, distribution;
@@ -24,18 +26,8 @@ abstract class Model
     protected double[] sumsOfWeights, sumsOfWeightLogWeights, entropies;
 
     public enum Heuristic { Entropy, MRV, Scanline };
-    Heuristic heuristic;
 
-    protected Model(int width, int height, int N, bool periodic, Heuristic heuristic)
-    {
-        MX = width;
-        MY = height;
-        this.N = N;
-        this.periodic = periodic;
-        this.heuristic = heuristic;
-    }
-
-    void Init()
+    private void Init()
     {
         wave = new bool[MX * MY][];
         compatible = new int[wave.Length][][];
@@ -96,7 +88,7 @@ abstract class Model
         return true;
     }
 
-    int NextUnobservedNode(Random random)
+    private int NextUnobservedNode(Random random)
     {
         if (heuristic == Heuristic.Scanline)
         {
@@ -132,7 +124,7 @@ abstract class Model
         return argmin;
     }
 
-    void Observe(int node, Random random)
+    private void Observe(int node, Random random)
     {
         bool[] w = wave[node];
         for (int t = 0; t < T; t++) distribution[t] = w[t] ? weights[t] : 0.0;
@@ -140,7 +132,7 @@ abstract class Model
         for (int t = 0; t < T; t++) if (w[t] != (t == r)) Ban(node, t);
     }
 
-    bool Propagate()
+    private bool Propagate()
     {
         while (stacksize > 0)
         {
@@ -179,7 +171,7 @@ abstract class Model
         return sumsOfOnes[0] > 0;
     }
 
-    void Ban(int i, int t)
+    private void Ban(int i, int t)
     {
         wave[i][t] = false;
 
@@ -196,7 +188,7 @@ abstract class Model
         entropies[i] = Math.Log(sum) - sumsOfWeightLogWeights[i] / sum;
     }
 
-    void Clear()
+    private void Clear()
     {
         for (int i = 0; i < wave.Length; i++)
         {

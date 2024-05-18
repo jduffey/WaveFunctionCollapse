@@ -1,12 +1,13 @@
 ﻿// Copyright (C) 2016 Maxim Gumin, The MIT License (MIT)
 
 using System;
-using System.Xml.Linq;
 using System.Diagnostics;
 using System.IO;
-using WaveFunctionCollapse;
+using System.Xml.Linq;
 
-static class Program
+namespace WaveFunctionCollapse;
+
+internal static class Program
 {
     private static void Main(string[] args)
     {

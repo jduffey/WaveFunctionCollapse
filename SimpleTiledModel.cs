@@ -1,18 +1,21 @@
 ﻿// Copyright (C) 2016 Maxim Gumin, The MIT License (MIT)
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
-using System.Collections.Generic;
 
-class SimpleTiledModel : Model
+namespace WaveFunctionCollapse;
+
+internal class SimpleTiledModel : Model
 {
     List<int[]> tiles;
     List<string> tilenames;
     int tilesize;
     bool blackBackground;
 
-    public SimpleTiledModel(string name, string subsetName, int width, int height, bool periodic, bool blackBackground, Heuristic heuristic) : base(width, height, 1, periodic, heuristic)
+    public SimpleTiledModel(string name, string subsetName, int width, int height, bool periodic, bool blackBackground, Heuristic heuristic)
+        : base(width, height, 1, periodic, heuristic)
     {
         this.blackBackground = blackBackground;
         XElement xroot = XDocument.Load($"tilesets/{name}.xml").Root;
@@ -25,15 +28,6 @@ class SimpleTiledModel : Model
             if (xsubset == null) Console.WriteLine($"ERROR: subset {subsetName} is not found");
             else subset = xsubset.Elements("tile").Select(x => x.Get<string>("name")).ToList();
         }
-
-        static int[] tile(Func<int, int, int> f, int size)
-        {
-            int[] result = new int[size * size];
-            for (int y = 0; y < size; y++) for (int x = 0; x < size; x++) result[x + y * size] = f(x, y);
-            return result;
-        };
-        static int[] rotate(int[] array, int size) => tile((x, y) => array[size - 1 - y + x * size], size);
-        static int[] reflect(int[] array, int size) => tile((x, y) => array[size - 1 - x + y * size], size);
 
         tiles = new List<int[]>();
         tilenames = new List<string>();
@@ -129,8 +123,8 @@ class SimpleTiledModel : Model
 
                 for (int t = 1; t < cardinality; t++)
                 {
-                    if (t <= 3) tiles.Add(rotate(tiles[T + t - 1], tilesize));
-                    if (t >= 4) tiles.Add(reflect(tiles[T + t - 4], tilesize));
+                    if (t <= 3) tiles.Add(Rotate(tiles[T + t - 1], tilesize));
+                    if (t >= 4) tiles.Add(Reflect(tiles[T + t - 4], tilesize));
                     tilenames.Add($"{tilename} {t}");
                 }
             }
@@ -172,10 +166,10 @@ class SimpleTiledModel : Model
         }
 
         for (int t2 = 0; t2 < T; t2++) for (int t1 = 0; t1 < T; t1++)
-            {
-                densePropagator[2][t2][t1] = densePropagator[0][t1][t2];
-                densePropagator[3][t2][t1] = densePropagator[1][t1][t2];
-            }
+        {
+            densePropagator[2][t2][t1] = densePropagator[0][t1][t2];
+            densePropagator[3][t2][t1] = densePropagator[1][t1][t2];
+        }
 
         List<int>[][] sparsePropagator = new List<int>[4][];
         for (int d = 0; d < 4; d++)
@@ -185,17 +179,28 @@ class SimpleTiledModel : Model
         }
 
         for (int d = 0; d < 4; d++) for (int t1 = 0; t1 < T; t1++)
-            {
-                List<int> sp = sparsePropagator[d][t1];
-                bool[] tp = densePropagator[d][t1];
+        {
+            List<int> sp = sparsePropagator[d][t1];
+            bool[] tp = densePropagator[d][t1];
 
-                for (int t2 = 0; t2 < T; t2++) if (tp[t2]) sp.Add(t2);
+            for (int t2 = 0; t2 < T; t2++) if (tp[t2]) sp.Add(t2);
 
-                int ST = sp.Count;
-                if (ST == 0) Console.WriteLine($"ERROR: tile {tilenames[t1]} has no neighbors in direction {d}");
-                propagator[d][t1] = new int[ST];
-                for (int st = 0; st < ST; st++) propagator[d][t1][st] = sp[st];
-            }
+            int ST = sp.Count;
+            if (ST == 0) Console.WriteLine($"ERROR: tile {tilenames[t1]} has no neighbors in direction {d}");
+            propagator[d][t1] = new int[ST];
+            for (int st = 0; st < ST; st++) propagator[d][t1][st] = sp[st];
+        }
+    }
+
+    private static int[] Reflect(int[] array, int size) => Tile((x, y) => array[size - 1 - x + y * size], size);
+
+    private static int[] Rotate(int[] array, int size) => Tile((x, y) => array[size - 1 - y + x * size], size);
+
+    private static int[] Tile(Func<int, int, int> f, int size)
+    {
+        int[] result = new int[size * size];
+        for (int y = 0; y < size; y++) for (int x = 0; x < size; x++) result[x + y * size] = f(x, y);
+        return result;
     }
 
     public override void Save(string filename)
@@ -204,11 +209,11 @@ class SimpleTiledModel : Model
         if (observed[0] >= 0)
         {
             for (int x = 0; x < MX; x++) for (int y = 0; y < MY; y++)
-                {
-                    int[] tile = tiles[observed[x + y * MX]];
-                    for (int dy = 0; dy < tilesize; dy++) for (int dx = 0; dx < tilesize; dx++)
-                            bitmapData[x * tilesize + dx + (y * tilesize + dy) * MX * tilesize] = tile[dx + dy * tilesize];
-                }
+            {
+                int[] tile = tiles[observed[x + y * MX]];
+                for (int dy = 0; dy < tilesize; dy++) for (int dx = 0; dx < tilesize; dx++)
+                    bitmapData[x * tilesize + dx + (y * tilesize + dy) * MX * tilesize] = tile[dx + dy * tilesize];
+            }
         }
         else
         {
@@ -217,24 +222,24 @@ class SimpleTiledModel : Model
                 int x = i % MX, y = i / MX;
                 if (blackBackground && sumsOfOnes[i] == T)
                     for (int yt = 0; yt < tilesize; yt++) for (int xt = 0; xt < tilesize; xt++)
-                            bitmapData[x * tilesize + xt + (y * tilesize + yt) * MX * tilesize] = 255 << 24;
+                        bitmapData[x * tilesize + xt + (y * tilesize + yt) * MX * tilesize] = 255 << 24;
                 else
                 {
                     bool[] w = wave[i];
                     double normalization = 1.0 / sumsOfWeights[i];
                     for (int yt = 0; yt < tilesize; yt++) for (int xt = 0; xt < tilesize; xt++)
+                    {
+                        int idi = x * tilesize + xt + (y * tilesize + yt) * MX * tilesize;
+                        double r = 0, g = 0, b = 0;
+                        for (int t = 0; t < T; t++) if (w[t])
                         {
-                            int idi = x * tilesize + xt + (y * tilesize + yt) * MX * tilesize;
-                            double r = 0, g = 0, b = 0;
-                            for (int t = 0; t < T; t++) if (w[t])
-                                {
-                                    int argb = tiles[t][xt + yt * tilesize];
-                                    r += ((argb & 0xff0000) >> 16) * weights[t] * normalization;
-                                    g += ((argb & 0xff00) >> 8) * weights[t] * normalization;
-                                    b += (argb & 0xff) * weights[t] * normalization;
-                                }
-                            bitmapData[idi] = unchecked((int)0xff000000 | ((int)r << 16) | ((int)g << 8) | (int)b);
+                            int argb = tiles[t][xt + yt * tilesize];
+                            r += ((argb & 0xff0000) >> 16) * weights[t] * normalization;
+                            g += ((argb & 0xff00) >> 8) * weights[t] * normalization;
+                            b += (argb & 0xff) * weights[t] * normalization;
                         }
+                        bitmapData[idi] = unchecked((int)0xff000000 | ((int)r << 16) | ((int)g << 8) | (int)b);
+                    }
                 }
             }
         }
