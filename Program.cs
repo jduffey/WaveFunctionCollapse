@@ -4,9 +4,7 @@ using System;
 using System.Xml.Linq;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Text;
+using WaveFunctionCollapse;
 
 static class Program
 {
@@ -15,10 +13,10 @@ static class Program
         Stopwatch sw = Stopwatch.StartNew();
 
         const string outputDirectoryName = "output";
-        PrepareOutputDirectory(outputDirectoryName);
+        Utils.PrepareOutputDirectory(outputDirectoryName);
 
         XDocument xdoc = XDocument.Load("samples.xml");
-        var randomValueOverride = GetFlagValue(args, "--randomValueOverride");
+        var randomValueOverride = Utils.GetFlagValue(args, "--randomValueOverride");
         Random random = new Random();
         foreach (XElement xelem in xdoc.Root.Elements("overlapping", "simpletiled"))
         {
@@ -74,7 +72,7 @@ static class Program
 
         if (randomValueOverride is not null)
         {
-            CalculateAndSaveHashes(outputDirectoryName, randomValueOverride.Value, elapsedMilliseconds);
+            Utils.CalculateAndSaveHashes(outputDirectoryName, randomValueOverride.Value, elapsedMilliseconds);
         }
     }
 
@@ -100,66 +98,5 @@ static class Program
 
         Console.WriteLine("CONTRADICTION");
         return false;
-    }
-
-    private static int? GetFlagValue(string[] args, string flagName)
-    {
-        int flagNameIndex = Array.IndexOf(args, flagName);
-
-        if (flagNameIndex >= 0 &&
-            flagNameIndex + 1 < args.Length &&
-            int.TryParse(args[flagNameIndex + 1], out int flagValue))
-        {
-            return flagValue;
-        }
-
-        return null;
-    }
-
-    private static void CalculateAndSaveHashes(string directoryPath, int randomValueOverride, long elapsedMilliseconds)
-    {
-        if (!Directory.Exists(directoryPath))
-        {
-            Console.WriteLine("Directory does not exist.");
-            return;
-        }
-
-        string[] filePaths = Directory.GetFiles(directoryPath);
-        Array.Sort(filePaths);
-
-        StringBuilder sb = new StringBuilder();
-        foreach (string filePath in filePaths)
-        {
-            string hash = ComputeSha256Hash(filePath);
-            string fileName = Path.GetFileName(filePath);
-            Console.WriteLine($"{fileName}: {hash}");
-            sb.AppendLine($"{fileName}: {hash}");
-        }
-
-        string timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
-        string outputFileName = $"{timestamp}_{randomValueOverride}.txt";
-
-        sb.AppendLine();
-        sb.AppendLine($"Elapsed Milliseconds: {elapsedMilliseconds}");
-        sb.AppendLine($"Runtime Version: {Environment.Version}");
-        sb.AppendLine($"Operating System: {Environment.OSVersion}");
-        sb.AppendLine($"Processor Count: {Environment.ProcessorCount}");
-        sb.AppendLine($"Processor Architecture: {RuntimeInformation.ProcessArchitecture}");
-
-        File.WriteAllText(outputFileName, sb.ToString());
-    }
-
-    private static string ComputeSha256Hash(string filePath)
-    {
-        using SHA256 sha256 = SHA256.Create();
-        using FileStream fs = File.OpenRead(filePath);
-        byte[] hashBytes = sha256.ComputeHash(fs);
-        return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
-    }
-
-    private static void PrepareOutputDirectory(string directoryName)
-    {
-        var directory = Directory.CreateDirectory(directoryName);
-        foreach (var file in directory.GetFiles()) file.Delete();
     }
 }
