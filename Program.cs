@@ -3,6 +3,10 @@
 using System;
 using System.Xml.Linq;
 using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 
 static class Program
 {
@@ -76,7 +80,54 @@ static class Program
             }
         }
 
-        Console.WriteLine($"time = {sw.ElapsedMilliseconds}");
+        Console.WriteLine($"time = {sw.ElapsedMilliseconds} for generating output");
+
+        if (randomValueOverride is not null)
+        {
+            CalculateAndSaveHashes(outputDirectoryName, randomValueOverride.Value);
+        }
+    }
+
+    static void CalculateAndSaveHashes(string directoryPath, int randomValueOverride)
+    {
+        if (!Directory.Exists(directoryPath))
+        {
+            Console.WriteLine("Directory does not exist.");
+            return;
+        }
+
+        string[] filePaths = Directory.GetFiles(directoryPath);
+        Array.Sort(filePaths);
+
+        StringBuilder sb = new StringBuilder();
+        foreach (string filePath in filePaths)
+        {
+            string hash = ComputeSha256Hash(filePath);
+            string fileName = Path.GetFileName(filePath);
+            Console.WriteLine($"{fileName}: {hash}");
+            sb.AppendLine($"{fileName}: {hash}");
+        }
+
+        string timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
+        string outputFileName = $"{timestamp}_{randomValueOverride}.txt";
+
+        sb.AppendLine();
+        sb.AppendLine($"Runtime Version: {Environment.Version}");
+        sb.AppendLine($"Operating System: {Environment.OSVersion}");
+        sb.AppendLine($"Processor Count: {Environment.ProcessorCount}");
+        sb.AppendLine($"Processor Architecture: {RuntimeInformation.ProcessArchitecture}");
+
+        File.WriteAllText(outputFileName, sb.ToString());
+    }
+
+    static string ComputeSha256Hash(string filePath)
+    {
+        using (SHA256 sha256 = SHA256.Create())
+        using (FileStream fs = File.OpenRead(filePath))
+        {
+            byte[] hashBytes = sha256.ComputeHash(fs);
+            return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+        }
     }
 
     private static void PrepareOutputDirectory(string directoryName)
