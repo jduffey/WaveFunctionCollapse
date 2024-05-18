@@ -22,9 +22,8 @@ static class Program
         Random random = new Random();
         foreach (XElement xelem in xdoc.Root.Elements("overlapping", "simpletiled"))
         {
-            Model model;
             string name = xelem.Get<string>("name");
-            Console.WriteLine($"< {name}");
+            Console.WriteLine($"Sample name: {name}");
 
             bool isOverlapping = xelem.Name == "overlapping";
             int size = xelem.Get("size", isOverlapping ? 48 : 24);
@@ -39,6 +38,7 @@ static class Program
                 _ => Model.Heuristic.Entropy
             };
 
+            Model model;
             if (isOverlapping)
             {
                 int N = xelem.Get("N", 3);
@@ -56,21 +56,29 @@ static class Program
                 model = new SimpleTiledModel(name, subset, width, height, periodic, blackBackground, heuristic);
             }
 
-            for (int i = 0; i < xelem.Get("screenshots", 2); i++)
+            var maxScreenshots = xelem.Get("screenshots", 2);
+            for (int i = 0; i < maxScreenshots; i++)
             {
-                for (int k = 0; k < 10; k++)
+                Console.WriteLine($" - Screenshot {i + 1}/{maxScreenshots}");
+                var maxAttempts = 10;
+                for (int k = 0; k < maxAttempts; k++)
                 {
-                    Console.Write("> ");
+                    Console.Write($"  - Attempt {k + 1}/{maxAttempts} --> ");
                     int seed = randomValueOverride ?? random.Next();
                     bool success = model.Run(seed, xelem.Get("limit", -1));
                     if (success)
                     {
-                        Console.WriteLine("DONE");
-                        model.Save($"{outputDirectoryName}/{name} {seed}.png");
+                        var filename = $"{outputDirectoryName}/{name} {seed}";
+                        var pngFilename = $"{filename}.png";
+                        model.Save(pngFilename);
+                        Console.Write($"DONE; wrote {pngFilename}");
                         if (model is SimpleTiledModel stmodel && xelem.Get("textOutput", false))
                         {
-                            File.WriteAllText($"{outputDirectoryName}/{name} {seed}.txt", stmodel.TextOutput());
+                            var textFilename = $"{filename}.txt";
+                            File.WriteAllText(textFilename, stmodel.TextOutput());
+                            Console.Write($" & {textFilename}");
                         }
+                        Console.WriteLine();
                         break;
                     }
 
