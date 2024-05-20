@@ -28,7 +28,7 @@ public static class Utils
         foreach (var file in directory.GetFiles()) file.Delete();
     }
 
-    public static void CalculateAndSaveHashes(string directoryPath, int randomValueOverride, long elapsedMilliseconds)
+    public static void CalculateAndSaveHashes(string directoryPath, int randomSeed, long elapsedMilliseconds)
     {
         if (!Directory.Exists(directoryPath))
         {
@@ -49,7 +49,7 @@ public static class Utils
         }
 
         string timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
-        string outputFileName = $"{timestamp}_{randomValueOverride}.txt";
+        string outputFileName = $"{timestamp}_{randomSeed}.txt";
 
         sb.AppendLine();
         sb.AppendLine($"Elapsed Milliseconds: {elapsedMilliseconds}");

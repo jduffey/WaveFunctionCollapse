@@ -2,7 +2,6 @@
 
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Xml.Linq;
 
 namespace WaveFunctionCollapse;
@@ -37,34 +36,31 @@ internal static class Program
                 _ => Model.Heuristic.Entropy
             };
 
-            Model model;
-            if (isOverlapping)
-            {
-                int N = xelem.Get("N", 3);
-                bool periodicInput = xelem.Get("periodicInput", true);
-                int symmetry = xelem.Get("symmetry", 8);
-                bool ground = xelem.Get("ground", false);
-
-                model = new OverlappingModel(name, N, width, height, periodicInput, periodic, symmetry, ground, heuristic);
-            }
-            else
-            {
-                string subset = xelem.Get<string>("subset");
-                bool blackBackground = xelem.Get("blackBackground", false);
-
-                model = new SimpleTiledModel(name, subset, width, height, periodic, blackBackground, heuristic);
-            }
+            Model model = CreateModel(
+                isOverlapping,
+                xelem,
+                name,
+                width,
+                height,
+                periodic,
+                heuristic
+            );
 
             var maxScreenshots = randomValueOverride.HasValue ? 1 : xelem.Get("screenshots", 2);
             for (int i = 0; i < maxScreenshots; i++)
             {
                 Console.WriteLine($" - Screenshot {i + 1}/{maxScreenshots}");
                 var maxAttempts = randomValueOverride.HasValue ? 1 : 10;
-                for (int k = 0; k < maxAttempts; k++)
-                {
-                    Console.Write($"  - Attempt {k + 1}/{maxAttempts} --> ");
-                    if (AttemptToGenerateModel(randomValueOverride, random, model, xelem, outputDirectoryName, name)) break;
-                }
+
+                RunAttemptsToGenerateModel(
+                    maxAttempts,
+                    randomValueOverride,
+                    random,
+                    model,
+                    xelem,
+                    outputDirectoryName,
+                    name
+                );
             }
         }
 
@@ -77,27 +73,63 @@ internal static class Program
         }
     }
 
-    private static bool AttemptToGenerateModel(int? randomValueOverride, Random random, Model model, XElement xelem, string outputDirectoryName, string name)
+    private static void RunAttemptsToGenerateModel(int maxAttempts, int? randomValueOverride, Random random, Model model, XElement xelem,
+        string outputDirectoryName, string name)
     {
-        int seed = randomValueOverride ?? random.Next();
-        bool success = model.Run(seed, xelem.Get("limit", -1));
-        if (success)
+        for (int k = 0; k < maxAttempts; k++)
         {
-            var filename = $"{outputDirectoryName}/{name} {seed}";
-            var pngFilename = $"{filename}.png";
-            model.Save(pngFilename);
-            Console.Write($"DONE; wrote {pngFilename}");
-            if (model is SimpleTiledModel stmodel && xelem.Get("textOutput", false))
+            Console.Write($"  - Attempt {k + 1}/{maxAttempts} --> ");
+            if (ModelSynthesizer.AttemptToGenerateModel(
+                    randomValueOverride,
+                    random,
+                    model,
+                    xelem,
+                    outputDirectoryName,
+                    name))
             {
-                var textFilename = $"{filename}.txt";
-                File.WriteAllText(textFilename, stmodel.TextOutput());
-                Console.Write($" & {textFilename}");
+                break;
             }
-            Console.WriteLine();
-            return true;
+        }
+    }
+
+    private static Model CreateModel(bool isOverlapping, XElement xelem, string name, int width, int height, bool periodic, Model.Heuristic heuristic)
+    {
+        Model model;
+        if (isOverlapping)
+        {
+            int N = xelem.Get("N", 3);
+            bool periodicInput = xelem.Get("periodicInput", true);
+            int symmetry = xelem.Get("symmetry", 8);
+            bool ground = xelem.Get("ground", false);
+
+            model = new OverlappingModel(
+                name,
+                N,
+                width,
+                height,
+                periodicInput,
+                periodic,
+                symmetry,
+                ground,
+                heuristic
+            );
+        }
+        else
+        {
+            string subset = xelem.Get<string>("subset");
+            bool blackBackground = xelem.Get("blackBackground", false);
+
+            model = new SimpleTiledModel(
+                name,
+                subset,
+                width,
+                height,
+                periodic,
+                blackBackground,
+                heuristic
+            );
         }
 
-        Console.WriteLine("CONTRADICTION");
-        return false;
+        return model;
     }
 }

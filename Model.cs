@@ -4,7 +4,7 @@ using System;
 
 namespace WaveFunctionCollapse;
 
-internal abstract class Model(int width, int height, int N, bool periodic, Model.Heuristic heuristic)
+public abstract class Model(int width, int height, int N, bool periodic, Model.Heuristic heuristic)
 {
     protected bool[][] wave;
 
